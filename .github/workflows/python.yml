@@ -13,6 +13,17 @@ jobs:
     name: Run tests (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    services:
+      localstack:
+        # Pin the Community image so tests do not require a Pro license.
+        image: localstack/localstack:4.12.0
+        ports:
+          - 4566:4566
+        options: >-
+          --health-cmd "curl -f http://localhost:4566/_localstack/health || exit 1"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 30
     strategy:
       fail-fast: false
       matrix:
@@ -51,14 +62,6 @@ jobs:
         run: ruff check .
       - name: Build package
         run: python -m build --outdir "$RUNNER_TEMP/dist" python
-      # Configure this repository secret with a LocalStack CI auth token.
-      - name: Set up LocalStack
-        uses: LocalStack/setup-localstack@v0.3.2
-        with:
-          image-tag: "latest"
-          install-awslocal: "false"
-        env:
-          LOCALSTACK_AUTH_TOKEN: ${{ secrets.LOCALSTACK_AUTH_TOKEN }}
       - name: Set up Pulumi
         uses: pulumi/actions@v7
       - name: Test with pytest
